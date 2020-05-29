@@ -10,27 +10,27 @@ huggingface/tokenizers 已经实现了tokenize后的token对应原始文本的id
 from tokenizers import BertWordPieceTokenizer
 
 
-def get_char_token_idx(offsets, sentence_len):
-    '''获得 char 的 token_idx, 以数组形式返回'''
-    token_idx = [None] * sentence_len
+def get_char_token_indexes(offsets, sentence_len):
+    '''获得一句话中所有 char 的 token_idx, 以数组形式返回'''
+    token_indexes = [None] * sentence_len
     for i, offset in enumerate(offsets):
         start, end = offset
-        token_idx[start: end] = [i] * (end - start)
+        token_indexes[start: end] = [i] * (end - start)
     
-    return token_idx
+    return token_indexes
 
 
-def get_token_span(token_idx):
+def get_token_span(span_token_indexes):
     '''寻找第一个和最后一个不为None的数, 返回一个有效区间'''
     i = 0
-    while token_idx[i] is None:
+    while span_token_indexes[i] is None:
         i += 1
-    start = token_idx[i]
+    start = span_token_indexes[i]
     
     i = -1
-    while token_idx[i] is None:
+    while span_token_indexes[i] is None:
         i -= 1
-    end = token_idx[i]
+    end = span_token_indexes[i]
     
     return start, end + 1  # [start, end)
 
