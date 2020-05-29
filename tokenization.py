@@ -21,7 +21,7 @@ def get_char_token_idx(offsets, sentence_len):
 
 
 def get_token_span(token_idx):
-    '''寻找第一个和最后一个不为None的数'''
+    '''寻找第一个和最后一个不为None的数, 返回一个有效区间'''
     i = 0
     while token_idx[i] is None:
         i += 1
@@ -32,5 +32,5 @@ def get_token_span(token_idx):
         i -= 1
     end = token_idx[i]
     
-    return start, end
+    return start, end + 1  # [start, end)
 
