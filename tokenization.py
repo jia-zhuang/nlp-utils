@@ -29,7 +29,7 @@ def get_token_span(span_token_indexes):
         i += 1
     start = None if i >= length else span_token_indexes[i]
     
-    if start is None:
+    if start is None:  # 应对输入全是None的情况
         return 0, 0
     
     i = -1
