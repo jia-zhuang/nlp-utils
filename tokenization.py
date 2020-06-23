@@ -22,10 +22,15 @@ def get_char_token_indexes(offsets, sentence_len):
 
 def get_token_span(span_token_indexes):
     '''寻找第一个和最后一个不为None的数, 返回一个有效区间'''
+    length = len(span_token_indexes)
+    
     i = 0
-    while span_token_indexes[i] is None:
+    while i < length and span_token_indexes[i] is None:
         i += 1
-    start = span_token_indexes[i]
+    start = None if i >= length else span_token_indexes[i]
+    
+    if start is None:
+        return 0, 0
     
     i = -1
     while span_token_indexes[i] is None:
@@ -33,4 +38,3 @@ def get_token_span(span_token_indexes):
     end = span_token_indexes[i]
     
     return start, end + 1  # [start, end)
-
