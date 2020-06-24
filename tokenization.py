@@ -10,31 +10,71 @@ huggingface/tokenizers 已经实现了tokenize后的token对应原始文本的id
 from tokenizers import BertWordPieceTokenizer
 
 
-def get_char_token_indexes(offsets, sentence_len):
-    '''获得一句话中所有 char 的 token_idx, 以数组形式返回'''
-    token_indexes = [None] * sentence_len
-    for i, offset in enumerate(offsets):
-        start, end = offset
-        token_indexes[start: end] = [i] * (end - start)
+class TokenizedSentence:
+    '''使用前需要先调用setup_tokenizer'''
+    tokenizer = None
+    max_seq_length = None
     
-    return token_indexes
+    @classmethod
+    def setup_tokenizer(cls, tokenizer, max_seq_length):
+        cls.tokenizer = tokenizer
+        cls.tokenizer.enable_truncation(max_length=max_seq_length)
+        cls.tokenizer.enable_padding(max_length=max_seq_length)
+    
+    def __init__(self, sentence=None):
+        
+        if sentence is not None:  
+            tokend = self.tokenizer.encode(sentence)
+            
+            self.sentence = sentence
+            self.tokens = tokend.tokens
+            self.input_ids = tokend.ids
+            self.attention_mask = tokend.attention_mask
+            self.token_type_ids = tokend.type_ids
+            self.token2char = tokend.offsets  # List[(int, int)] 每个token对应的char span
 
-
-def get_token_span(span_token_indexes):
-    '''寻找第一个和最后一个不为None的数, 返回一个有效区间'''
-    length = len(span_token_indexes)
+            self.char2token = [None] * len(sentence)
+            for i, (start, end) in enumerate(self.token2char):
+                self.char2token[start:end] = [i] * (end - start)
     
-    i = 0
-    while i < length and span_token_indexes[i] is None:
-        i += 1
-    start = None if i >= length else span_token_indexes[i]
+    def char_span_to_token_span(self, char_span):
+        token_indexes = self.char2token[char_span[0]:char_span[1]]
+        token_indexes = list(filter(None, token_indexes))
+        if token_indexes:
+            return token_indexes[0], token_indexes[-1] + 1  # [start, end)
+        else:  # empty
+            return 0, 0
     
-    if start is None:  # 应对输入全是None的情况
-        return 0, 0
+    def token_span_to_char_span(self, token_span):
+        start, end = token_span
+        return self.token2char[start][0], self.token2char[end - 1][1]
     
-    i = -1
-    while span_token_indexes[i] is None:
-        i -= 1
-    end = span_token_indexes[i]
+    def get_phrase_char_span(self, phrase):
+        start = self.sentence.find(phrase)
+        if start >= 0:  # phrase in sentence
+            return start, start + len(phrase)
+        else:  # phrase not in sentence
+            return 0, 0
     
-    return start, end + 1  # [start, end)
+    def get_phrase_by_token_span(self, token_span):
+        start, end = self.token_span_to_char_span(token_span)
+        return self.sentence[start: end]
+    
+    def dump_to_dict(self):
+        return {
+            'sentence': self.sentence,
+            'tokens': self.tokens,
+            'input_ids': self.input_ids,
+            'attention_mask': self.attention_mask,
+            'token_type_ids': self.token_type_ids,
+            'token2char': self.token2char,
+            'char2token': self.char2token
+        }
+    
+    @classmethod
+    def load_from_dict(cls, data):
+        '''data: dict, 格式参考`dump_to_dict`'''
+        instance = cls()
+        for k, v in data.items():
+            setattr(instance, k, v)
+        return instance
