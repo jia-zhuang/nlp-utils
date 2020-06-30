@@ -7,9 +7,6 @@ huggingface/tokenizers 已经实现了tokenize后的token对应原始文本的id
 '''
 
 
-from tokenizers import BertWordPieceTokenizer
-
-
 class TokenizedSentence:
     '''使用前需要先调用setup_tokenizer'''
     tokenizer = None
@@ -21,12 +18,16 @@ class TokenizedSentence:
         cls.tokenizer.enable_truncation(max_length=max_seq_length)
         cls.tokenizer.enable_padding(max_length=max_seq_length)
     
-    def __init__(self, sentence=None):
+    def __init__(self, sentence=None, prefix=None):
         
         if sentence is not None:  
-            tokend = self.tokenizer.encode(sentence)
+            if prefix is None:
+                tokend = self.tokenizer.encode(sentence)
+            else:
+                tokend = self.tokenizer.encode(prefix, pair=sentence)
             
             self.sentence = sentence
+            self.prefix = prefix
             self.tokens = tokend.tokens
             self.input_ids = tokend.ids
             self.attention_mask = tokend.attention_mask
@@ -34,8 +35,10 @@ class TokenizedSentence:
             self.token2char = tokend.offsets  # List[(int, int)] 每个token对应的char span
 
             self.char2token = [None] * len(sentence)
-            for i, (start, end) in enumerate(self.token2char):
-                self.char2token[start:end] = [i] * (end - start)
+            sentence_type_id = 0 if self.prefix is None else 1
+            for i, ((start, end), mask, type_id) in enumerate(zip(self.token2char, self.attention_mask, self.token_type_ids)):
+                if mask == 1 and type_id == sentence_type_id:
+                    self.char2token[start:end] = [i] * (end - start)
     
     def char_span_to_token_span(self, char_span):
         token_indexes = self.char2token[char_span[0]:char_span[1]]
@@ -63,6 +66,7 @@ class TokenizedSentence:
     def dump_to_dict(self):
         return {
             'sentence': self.sentence,
+            'prefix': self.prefix,
             'tokens': self.tokens,
             'input_ids': self.input_ids,
             'attention_mask': self.attention_mask,
@@ -78,3 +82,4 @@ class TokenizedSentence:
         for k, v in data.items():
             setattr(instance, k, v)
         return instance
+    
